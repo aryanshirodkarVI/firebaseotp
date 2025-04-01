@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase OTP Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 400px; margin: auto; padding: 20px; background: #ffffff; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Mobile OTP Verification</h2>
+        <input type="tel" id="phone-number" placeholder="+91XXXXXXXXXX" required>
+        <button type="button" onclick="sendOTP()">Send OTP</button>
+
+        <input type="text" id="otp" placeholder="Enter OTP" required>
+        <button type="button" onclick="verifyOTP()">Verify OTP</button>
+    </div>
+
+    <!-- Invisible Recaptcha Container -->
+    <div id="recaptcha-container"></div>
+
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCrejrafiIgYAQX7chK5vGY1bengUaVJnY",
+            authDomain: "shanazchs-3e4f5.firebaseapp.com",
+            projectId: "shanazchs-3e4f5",
+            storageBucket: "shanazchs-3e4f5.appspot.com",
+            messagingSenderId: "456218743301",
+            appId: "1:456218743301:web:434f751f19b98d209b026c",
+            measurementId: "G-7HSBD191LC"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Initialize RecaptchaVerifier
+        const recaptchaVerifier = new RecaptchaVerifier('recaptcha-container', {
+            'size': 'invisible', // Invisible Recaptcha
+            'callback': (response) => {
+                console.log("Recaptcha verified", response);
+            }
+        }, auth);
+
+        // Send OTP
+        function sendOTP() {
+            const phoneNumber = document.getElementById("phone-number").value;
+            const appVerifier = recaptchaVerifier;
+
+            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    alert("OTP sent successfully");
+                }).catch((error) => {
+                    alert("Error sending OTP: " + error.message);
+                });
+        }
+
+        // Verify OTP
+        function verifyOTP() {
+            const otp = document.getElementById("otp").value;
+            window.confirmationResult.confirm(otp)
+                .then((result) => {
+                    alert("Phone number verified!");
+                    // Send data to PHP script
+                    fetch('verify_user.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `phone=${result.user.phoneNumber}`
+                    }).then(response => response.text())
+                      .then(data => alert(data))
+                      .catch(error => alert("Error: " + error.message));
+                }).catch((error) => {
+                    alert("Invalid OTP");
+                });
+        }
+    </script>
+</body>
+</html>
