@@ -1,116 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="icon" type="image/png" href="./assets/images/Shanazlogo.png">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap" rel="stylesheet"> -->
-    <title>Shanaz CHS | Login</title>
-    <!-- <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/fontawesome.css"> -->
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification</title>
     <style>
-        .contact-btn {
-            background-color: #f66;
-            color: white;
-            font-weight: bold;
-            font-size: 16px;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
-            cursor: pointer;
-            text-transform: uppercase;
-            margin-top: 20px;
+        .container {
+            width: 302px;
+            height: 250px;
+            position: absolute;
+            left: 0px;
+            right: 0px;
+            top: 0px;
+            bottom: 0px;
+            margin: auto;
         }
-        .contact-btn:hover {
-            background-color: #ff4d4d;
+
+        #number, #Verificationcode {
+            width: calc(100% - 24px);
+            padding: 10px;
+            font-size: 20px;
+            margin-bottom: 5px;
+            outline: none;
+        }
+
+        #recaptcha-container {
+            margin-bottom: 5px;
+        }
+
+        #send, #verify {
+            width: 100%;
+            height: 40px;
+            outline: none;
+        }
+
+        .p-conf, .n-conf {
+            width: calc(100% - 22px);
+            border: 2px solid green;
+            border-radius: 4px;
+            padding: 8px 10px;
+            margin: 4px 0px;
+            background-color: rgba(0, 249, 12, 0.5);
+            display: none;
+        }
+
+        .n-conf {
+            border-color: red;
+            background-color: rgba(255, 0, 4, 0.5);
         }
     </style>
 </head>
 <body>
-    <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
-        <div class="card shadow-lg p-4" style="max-width: 400px;">
-            <div class="text-center mb-4">
-                <img src="./assets/images/Shanazlogo.png" alt="Logo" style="width: 80px;">
-                <h4>Login to Your Account</h4>
-            </div>
-            <form method="post">
-                <div class="form-group">
-                    <label for="number">Phone Number</label>
-                    <input type="text" class="form-control" id="number" name="number" required>
-                    <div id="recaptcha-container"></div>
-                </div>
-                <div class="form-group mt-3" id="otpSection" style="display: none;">
-                    <label for="Verificationcode">OTP</label>
-                    <input type="text" class="form-control" id="Verificationcode">
-                </div>
-                <button type="button" class="contact-btn" id="sendOtp">Send OTP</button>
-                <button type="button" class="contact-btn" id="verifyOtp" style="display: none;">Verify OTP</button>
-            </form>
+    <div class="container">
+        <div id="sender">
+            <input type="text" id="number" placeholder="Enter your phone number">
+            <div id="recaptcha-container"></div>
+            <input type="button" value="Send OTP" id="send">
+        </div>
+        <div id="verifier" style="display: none;">
+            <input type="text" id="Verificationcode" placeholder="Enter OTP here">
+            <input type="button" value="Verify OTP" id="verify">
+            <div class="p-conf">Number Verified</div>
+            <div class="n-conf">OTP Error</div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/6.0.2/firebase.js"></script>
     <script>
-        // Firebase Configuration
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCrejrafiIgYAQX7chK5vGY1bengUaVJnY",
             authDomain: "shanazchs-3e4f5.firebaseapp.com",
             projectId: "shanazchs-3e4f5",
-            storageBucket: "shanazchs-3e4f5.appspot.com",
+            storageBucket: "shanazchs-3e4f5.firebasestorage.app",
             messagingSenderId: "456218743301",
             appId: "1:456218743301:web:434f751f19b98d209b026c",
             measurementId: "G-7HSBD191LC"
         };
 
         firebase.initializeApp(firebaseConfig);
+
+        // Initialize reCAPTCHA Verifier (Visible)
         let recaptchaVerifier;
 
-        // Initialize reCAPTCHA
+        // Initialize reCAPTCHA when document is loaded
         window.onload = () => {
-            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container');
-            recaptchaVerifier.render();
-        };
-
-        // Send OTP
-        document.getElementById('sendOtp').onclick = () => {
-            const phoneNumber = document.getElementById('number').value.trim();
-            
-            fetch('check_phone.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ number: phoneNumber })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                if (data.exists) {
-                    firebase.auth().signInWithPhoneNumber(phoneNumber, recaptchaVerifier)
-                        .then(confirmationResult => {
-                            window.confirmationResult = confirmationResult;
-                            document.getElementById('otpSection').style.display = 'block';
-                            document.getElementById('verifyOtp').style.display = 'inline-block';
-                        })
-                        .catch(error => alert('Error sending OTP: ' + error.message));
-                } else {
-                    alert('Phone number not registered.');
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                'size': 'normal',  // Visible reCAPTCHA
+                'callback': (response) => {
+                    console.log("ReCAPTCHA verified", response);
                 }
+            });
+
+            recaptchaVerifier.render().then(function(widgetId) {
+                console.log("reCAPTCHA widget rendered:", widgetId);
             });
         };
 
-        // Verify OTP
-        document.getElementById('verifyOtp').onclick = () => {
-            const otp = document.getElementById('Verificationcode').value.trim();
-            
+        // Send OTP function
+        document.getElementById("send").addEventListener("click", function () {
+            const phoneNumber = document.getElementById("number").value;
+            if (!phoneNumber) {
+                alert("Please enter a phone number.");
+                return;
+            }
+
+            // Send OTP using the reCAPTCHA verifier
+            firebase.auth().signInWithPhoneNumber(phoneNumber, recaptchaVerifier)
+                .then(function (confirmationResult) {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById("sender").style.display = "none";
+                    document.getElementById("verifier").style.display = "block";
+                    alert("OTP sent successfully.");
+                })
+                .catch(function (error) {
+                    alert("Error sending OTP: " + error.message);
+                    console.error("Error sending OTP:", error);
+                });
+        });
+
+        // Verify OTP function
+        document.getElementById("verify").addEventListener("click", function () {
+            const otp = document.getElementById("Verificationcode").value;
+            if (!otp) {
+                alert("Please enter the OTP.");
+                return;
+            }
+
             window.confirmationResult.confirm(otp)
-                .then(result => alert('Phone number verified!'))
-                .catch(error => alert('Invalid OTP'));
-        };
+                .then(function (result) {
+                    alert("Phone number verified!");
+                    document.querySelector('.p-conf').style.display = "block";
+                })
+                .catch(function (error) {
+                    alert("Invalid OTP");
+                    document.querySelector('.n-conf').style.display = "block";
+                    console.error("OTP verification failed:", error);
+                });
+        });
     </script>
 </body>
 </html>
